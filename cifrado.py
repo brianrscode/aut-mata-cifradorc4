@@ -1,6 +1,3 @@
-from Automata import AutomataFinitoDeterminista
-
-
 def ksa(llave):
     S = list(range(256))
     key_length = len(llave)
@@ -12,44 +9,35 @@ def ksa(llave):
     return S
 
 
-def prga(S):
+def prga(S, texto_plano):
     i = 0
     j = 0
-    while True:
+    k = 0
+    llaves = []
+    while k < len(texto_plano):
         i = (i + 1) % 256
         j = (j + S[i]) % 256
         S[i], S[j] = S[j], S[i]
 
-        yield S[(S[i] + S[j]) % 256]
+        llaves.append(S[(S[i] + S[j]) % 256])
+        k += 1
+    return llaves
 
 
-def rc4(llave, texto_plano, afd):
-
-    afd.agregar_estado("q2")
+def rc4(llave, texto_plano):
     S = ksa(llave)
-    llaves = prga(S)
-    afd.agregar_transicion("q1", "q2", "ksa y prga")
+    llaves = prga(S, texto_plano)
 
-    texto_cifrado = ""
-    for char in texto_plano:
-        texto_cifrado += "%02X" % (ord(char) ^ next(llaves))
-
-    return texto_cifrado
-
+    texto_cifrado = []
+    for idx, char in enumerate(texto_plano):
+        texto_cifrado.append("%02X" % (ord(char) ^ llaves[idx]))
+    return ' '.join(texto_cifrado)
 
 if __name__ == "__main__":
-    afd = AutomataFinitoDeterminista()
+    llave = "llavellavellavellave"
+    texto_plano = "textoPorCifrar"
 
-    afd.agregar_estado("q0", tipo="inicial")
 
-    llave = "Llave a utilizar"
-    texto_plano = "Mensaje a cifrar"
-
-    afd.agregar_estado("q1")
-    afd.agregar_transicion("q0", "q1", f"{texto_plano}\n{llave}")
-
-    texto_cifrado = rc4(llave, texto_plano, afd)
-
-    afd.agregar_estado("q3", tipo="final")
-    afd.agregar_transicion("q2", "q3", f"{texto_cifrado}")
-    afd.mostrar_automata()
+    texto_cifrado = rc4(llave, texto_plano)
+    print(texto_cifrado)
+    # 86 E4 92 A1 9D 74 5C CO FC 7A 3C 53 6A DO

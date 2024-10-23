@@ -11,7 +11,6 @@ import re
 #######################################################
 class AutomataFinitoDeterminista:
     def __init__(self):
-
         self.grafo = nx.MultiDiGraph()  # Grafo con múltiples aristas
 
     def agregar_estado(self, estado, tipo=None, color='skyblue'):
@@ -33,42 +32,51 @@ class AutomataFinitoDeterminista:
         self.grafo.add_edge(estado_origen, estado_destino, label=simbolo)
 
     def mostrar_automata(self):
-        '''Dibuja el autómata usando NetworkX y Matplotlib.'''
+        '''Dibuja el autómata paso a paso'''
+        # Nodos que tiene el autómata
+        nodos = list(self.grafo.nodes())
         # Posición de los nodos
-        pos_nodos = nx.spring_layout(self.grafo, seed=5, k=1)
+        # pos_nodos = nx.spring_layout(self.grafo, seed=5, k=1)
+        pos_nodos = nx.shell_layout(self.grafo)  # Posición de los nodos
+        # Tamaño de la figura
+        plt.figure(figsize=(11, 6))
         # Colores de los nodos
-        colores = [nx.get_node_attributes(self.grafo, 'color').get(n) for n in self.grafo.nodes()]
+        colores: list = [nx.get_node_attributes(self.grafo, 'color').get(n) for n in self.grafo.nodes()]
         # Etiquetas de los nodos
-        labels = nx.get_edge_attributes(self.grafo, 'label')
+        labels: dict = nx.get_edge_attributes(self.grafo, 'label')
+        # print(f"{nodos =}")
+        # print(f"{pos_nodos =}")
+        # print(f"{labels =}")
 
-        # Dibujar nodos y aristas
-        nx.draw(
-            self.grafo,
-            pos_nodos,
-            with_labels=True,
-            connectionstyle='arc3,rad=0.2',
-            node_size=2000,
-            node_color=colores,
-            font_size=10,
-            font_weight='bold',
-            edge_color='black'
-        )
-        # Dibujar etiquetas de las aristas
-        nx.draw_networkx_edge_labels(
-            self.grafo,
-            pos_nodos,
-            labels,
-            connectionstyle=[f"arc3,rad={r}" for r in it.accumulate([0.15] * 4)],
-            label_pos=0.5,
-            font_color="black",
-            # bbox={"alpha": 0},  # Elimina el fondo del label
-        )
+        # Muestra el paso a paso de la construcción del autómata
+        for i, _ in enumerate(nodos):
+            current_colors = [colores[idx] if idx <= i else "lightgrey" for idx in range(len(nodos))]
+            nx.draw(
+                self.grafo,
+                pos_nodos,
+                with_labels=True,
+                node_size=3000,
+                # connectionstyle='arc3,rad=0.2',
+                node_color=current_colors,
+                font_size=10,
+                font_weight='bold',
+                edge_color='black'
+            )
+            plt.pause(0.5)
+            for nodo_id in range(i):
+                nodo_origen = nodos[nodo_id]
+                nodo_destino = nodos[nodo_id + 1]
+                arista = labels[(nodo_origen, nodo_destino, 0)]
+                x_texto = (pos_nodos[nodo_origen][0] + pos_nodos[nodo_destino][0]) / 2
+                y_texto = (pos_nodos[nodo_origen][1] + pos_nodos[nodo_destino][1]) / 2
+                plt.text(x_texto, y_texto, arista, fontsize=10, ha='center', va='center', bbox=dict(facecolor='white', alpha=0.5))
+
+            plt.pause(0.5)
         plt.show()
 
     def q0(self, llave):
-        pat = r'[a-z]{5}'
         self.agregar_estado("q0", tipo="inicial")
-        if not re.match(pat, llave):
+        if not re.match(r'^[a-zA-Z0-9]+$', llave):
             self.agregar_estado("q8", tipo="noAceptado")
             self.agregar_transicion("q0", "q8", f"{llave}")
             return False
@@ -77,7 +85,7 @@ class AutomataFinitoDeterminista:
     def q1(self, texto_plano, llave):
         self.agregar_estado("q1")
         self.agregar_transicion("q0", "q1", f"{llave}")
-        if not re.match(r'[a-zA-Z0-9]{5,10}', texto_plano):
+        if not re.match(r'^[a-zA-Z0-9]+$', texto_plano):
             self.agregar_estado("q9", tipo="noAceptado")
             self.agregar_transicion("q1", "q9", f"{llave}")
             return False
@@ -102,6 +110,7 @@ class AutomataFinitoDeterminista:
         return S
 
     def q4(self, S, texto_plano):
+        '''Algoritmo de PRGA.'''
         i = 0
         j = 0
         k = 0
@@ -128,45 +137,12 @@ class AutomataFinitoDeterminista:
 
         self.agregar_transicion("q5", "q6", "XOR")
 
-        return texto_cifrado
+        return ' '.join(texto_cifrado)
 
     def q6(self, texto_cifrado):
         self.agregar_estado("q7", tipo="final")
         self.agregar_transicion("q6", "q7", f"{texto_cifrado}")
 
-#######################################################
-##################### CIFRADO RC4 #####################
-#######################################################
-def ksa(llave):
-    '''Algoritmo de KSA.'''
-    S = list(range(256))  # Tabla S
-    key_length = len(llave)
-    llave_ascii = [ord(c) for c in llave]
-    j = 0
-    for i in range(256):
-        j = (j + llave_ascii[i % key_length] + S[i]) % 256
-        S[i], S[j] = S[j], S[i]
-    return S
-
-def prga(S):
-    '''Algoritmo de PRGA.'''
-    i = 0
-    j = 0
-    while True:
-        i = (i + 1) % 256
-        j = (j + S[i]) % 256
-        S[i], S[j] = S[j], S[i]
-        yield S[(S[i] + S[j]) % 256]
-
-def rc4(llave, texto_plano, afd):
-    afd.agregar_estado("q2")
-    S = ksa(llave)
-    llaves = prga(S)
-    afd.agregar_transicion("q1", "q2", "ksa y prga")
-
-    texto_cifrado = ""
-    for char in texto_plano:
-        texto_cifrado += "%02X" % (ord(char) ^ next(llaves))
 
 # Función que se ejecuta al presionar el botón
 def generar_automata():
@@ -201,13 +177,13 @@ root.title("Generador de Autómata y RC4")
 root.geometry("300x200")
 
 # Etiquetas y entradas de texto
-label_llave = tk.Label(root, text="Llave de 5 caracteres (a-z):")
+label_llave = tk.Label(root, text="Llave:")
 label_llave.pack()
 
 entry_llave = tk.Entry(root)
 entry_llave.pack()
 
-label_texto = tk.Label(root, text="Texto plano de 5 a 10 carateres (a-zA-Z0-9):")
+label_texto = tk.Label(root, text="Texto plano:")
 label_texto.pack()
 
 entry_texto = tk.Entry(root)
