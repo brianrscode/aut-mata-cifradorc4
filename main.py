@@ -3,6 +3,7 @@ from tkinter import messagebox
 import networkx as nx
 import matplotlib.pyplot as plt
 import itertools as it
+import re
 
 
 #######################################################
@@ -14,86 +15,134 @@ class AutomataFinitoDeterminista:
 
     def agregar_estado(self, estado, tipo=None, color='skyblue'):
         '''Agrega un estado (nodo) al autómata.'''
-        self.grafo.add_node(estado)
         if tipo == 'final':
-            nx.set_node_attributes(self.grafo, {estado: 'red'}, 'color')
+            color = 'green'
         elif tipo == 'inicial':
-            nx.set_node_attributes(self.grafo, {estado: 'green'}, 'color')
-        else:
-            nx.set_node_attributes(self.grafo, {estado: color}, 'color')
+            color = 'yellow'
+        elif tipo == 'noAceptado':
+            color = 'red'
+        if not color:
+            color = 'skyblue'
+
+        self.grafo.add_node(estado)
+        nx.set_node_attributes(self.grafo, {estado: color}, 'color')
 
     def agregar_transicion(self, estado_origen, estado_destino, simbolo):
         '''Agrega una transición (arista) entre estados.'''
         self.grafo.add_edge(estado_origen, estado_destino, label=simbolo)
 
     def mostrar_automata(self):
-        '''Dibuja el autómata usando NetworkX y Matplotlib.'''
+        '''Dibuja el autómata paso a paso'''
+        # Nodos que tiene el autómata
+        nodos = list(self.grafo.nodes())
         # Posición de los nodos
-        pos_nodos = nx.spring_layout(self.grafo, seed=5)
+        # pos_nodos = nx.spring_layout(self.grafo, seed=5, k=1)
+        pos_nodos = nx.shell_layout(self.grafo)  # Posición de los nodos
+        # Tamaño de la figura
+        plt.figure(figsize=(11, 6))
         # Colores de los nodos
-        colores = [nx.get_node_attributes(self.grafo, 'color').get(n) for n in self.grafo.nodes()]
+        colores: list = [nx.get_node_attributes(self.grafo, 'color').get(n) for n in self.grafo.nodes()]
         # Etiquetas de los nodos
-        labels = nx.get_edge_attributes(self.grafo, 'label')
+        labels: dict = nx.get_edge_attributes(self.grafo, 'label')
+        # print(f"{nodos =}")
+        # print(f"{pos_nodos =}")
+        # print(f"{labels =}")
 
-        # Dibujar nodos y aristas
-        nx.draw(
-            self.grafo,
-            pos_nodos,
-            with_labels=True,
-            connectionstyle='arc3,rad=0.2',
-            node_size=2000,
-            node_color=colores,
-            font_size=10,
-            font_weight='bold',
-            edge_color='black'
-        )
-        # Dibujar etiquetas de las aristas
-        nx.draw_networkx_edge_labels(
-            self.grafo,
-            pos_nodos,
-            labels,
-            connectionstyle=[f"arc3,rad={r}" for r in it.accumulate([0.15] * 4)],
-            label_pos=0.3,
-            font_color="black",
-            bbox={"alpha": 0},
-        )
+        # Muestra el paso a paso de la construcción del autómata
+        for i, _ in enumerate(nodos):
+            current_colors = [colores[idx] if idx <= i else "lightgrey" for idx in range(len(nodos))]
+            nx.draw(
+                self.grafo,
+                pos_nodos,
+                with_labels=True,
+                node_size=3000,
+                # connectionstyle='arc3,rad=0.2',
+                node_color=current_colors,
+                font_size=10,
+                font_weight='bold',
+                edge_color='black'
+            )
+            plt.pause(0.5)
+            for nodo_id in range(i):
+                nodo_origen = nodos[nodo_id]
+                nodo_destino = nodos[nodo_id + 1]
+                arista = labels[(nodo_origen, nodo_destino, 0)]
+                x_texto = (pos_nodos[nodo_origen][0] + pos_nodos[nodo_destino][0]) / 2
+                y_texto = (pos_nodos[nodo_origen][1] + pos_nodos[nodo_destino][1]) / 2
+                plt.text(x_texto, y_texto, arista, fontsize=10, ha='center', va='center', bbox=dict(facecolor='white', alpha=0.5))
+
+            plt.pause(0.5)
         plt.show()
 
-#######################################################
-##################### CIFRADO RC4 #####################
-#######################################################
-def ksa(llave):
-    '''Algoritmo de KSA.'''
-    S = list(range(256))  # Tabla S
-    key_length = len(llave)
-    j = 0
-    for i in range(256):
-        j = (j + ord(llave[i % key_length]) + S[i]) % 256
-        S[i], S[j] = S[j], S[i]
-    return S
+    def q0(self, llave):
+        self.agregar_estado("q0", tipo="inicial")
+        if not re.match(r'^[a-zA-Z0-9]+$', llave):
+            self.agregar_estado("q8", tipo="noAceptado")
+            self.agregar_transicion("q0", "q8", f"{llave}")
+            return False
+        return True
 
-def prga(S):
-    '''Algoritmo de PRGA.'''
-    i = 0
-    j = 0
-    salida = []
-    while len():
-        i = (i + 1) % 256
-        j = (j + S[i]) % 256
-        S[i], S[j] = S[j], S[i]
-        salida.append(S[(S[i] + S[j]) % 256])
+    def q1(self, texto_plano, llave):
+        self.agregar_estado("q1")
+        self.agregar_transicion("q0", "q1", f"{llave}")
+        if not re.match(r'^[a-zA-Z0-9]+$', texto_plano):
+            self.agregar_estado("q9", tipo="noAceptado")
+            self.agregar_transicion("q1", "q9", f"{llave}")
+            return False
+        return True
 
+    def q2(self, llave, texto_plano ):
+        llave_ascii = [ord(c) for c in llave]
+        self.agregar_estado("q2")
+        self.agregar_transicion("q1", "q2", f"{texto_plano}")
+        return llave_ascii
 
-def rc4(llave, texto_plano, afd):
-    afd.agregar_estado("q2")
-    S = ksa(llave)
-    llaves = prga(S)
-    afd.agregar_transicion("q1", "q2", "ksa y prga")
+    def q3(self, llave_ascii):
+        '''Algoritmo de KSA.'''
+        S = list(range(256))  # Tabla S
+        key_length = len(llave_ascii)
+        j = 0
+        for i in range(256):
+            j = (j + llave_ascii[i % key_length] + S[i]) % 256
+            S[i], S[j] = S[j], S[i]
+        self.agregar_estado("q3")
+        self.agregar_transicion("q2", "q3", f"{llave_ascii}")
+        return S
 
-    texto_cifrado = ""
-    for char in texto_plano:
-        texto_cifrado += "%02X" % (ord(char) ^ next(llaves))
-    return texto_cifrado
+    def q4(self, S, texto_plano):
+        '''Algoritmo de PRGA.'''
+        i = 0
+        j = 0
+        k = 0
+        llaves = []
+        self.agregar_estado("q4")
+        self.agregar_transicion("q3", "q4", "KSA")
+        while k < len(texto_plano):
+            i = (i + 1) % 256
+            j = (j + S[i]) % 256
+            S[i], S[j] = S[j], S[i]
+            llaves.append(S[(S[i] + S[j]) % 256])
+            k += 1
+
+        return llaves
+
+    def q5(self, llaves, texto_plano):
+        self.agregar_estado("q5")
+        self.agregar_estado("q6")
+        self.agregar_transicion("q4", "q5", "PRGA")
+
+        texto_cifrado = ""
+        for idx, char in enumerate(texto_plano):
+            texto_cifrado += "%02X" % (ord(char) ^ llaves[idx])
+
+        self.agregar_transicion("q5", "q6", "XOR")
+
+        return ' '.join(texto_cifrado)
+
+    def q6(self, texto_cifrado):
+        self.agregar_estado("q7", tipo="final")
+        self.agregar_transicion("q6", "q7", f"{texto_cifrado}")
+
 
 # Función que se ejecuta al presionar el botón
 def generar_automata():
@@ -108,16 +157,19 @@ def generar_automata():
         messagebox.showerror("Error", "Por favor ingrese tanto la llave como el texto plano.")
         return
 
+
     afd = AutomataFinitoDeterminista()
-    afd.agregar_estado("q0", tipo="inicial")
-    afd.agregar_estado("q1")
-    afd.agregar_transicion("q0", "q1", f"{texto_plano}\n{llave}")
+    if afd.q0(llave):
+        if afd.q1(texto_plano, llave):
+            llave_ascii = afd.q2(llave, texto_plano)
+            S = afd.q3(llave_ascii)
+            llaves = afd.q4(S, texto_plano)
+            texto_cifrado = afd.q5(llaves, texto_plano)
+            afd.q6(texto_cifrado)
 
-    texto_cifrado = rc4(llave, texto_plano, afd)
 
-    afd.agregar_estado("q3", tipo="final")
-    afd.agregar_transicion("q2", "q3", f"{texto_cifrado}")
     afd.mostrar_automata()
+
 
 # Interfaz gráfica con Tkinter
 root = tk.Tk()
