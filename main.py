@@ -50,19 +50,9 @@ class AutomataFinitoDeterminista:
 
         # Muestra el paso a paso de la construcción del autómata
         for i, _ in enumerate(nodos):
+            # Color del nodo actual
             current_colors = [colores[idx] if idx <= i else "lightgrey" for idx in range(len(nodos))]
-            nx.draw(
-                self.grafo,
-                pos_nodos,
-                with_labels=True,
-                node_size=3000,
-                # connectionstyle='arc3,rad=0.2',
-                node_color=current_colors,
-                font_size=10,
-                font_weight='bold',
-                edge_color='black'
-            )
-            plt.pause(0.5)
+            # Muestra el label de una arista entre dos nodos
             for nodo_id in range(i):
                 nodo_origen = nodos[nodo_id]
                 nodo_destino = nodos[nodo_id + 1]
@@ -70,28 +60,42 @@ class AutomataFinitoDeterminista:
                 x_texto = (pos_nodos[nodo_origen][0] + pos_nodos[nodo_destino][0]) / 2
                 y_texto = (pos_nodos[nodo_origen][1] + pos_nodos[nodo_destino][1]) / 2
                 plt.text(x_texto, y_texto, arista, fontsize=10, ha='center', va='center', bbox=dict(facecolor='white', alpha=0.5))
-
+            plt.pause(0.5)
+            # Muestra el autómata coloreando cada nodo paso a paso
+            nx.draw(
+                self.grafo,
+                pos_nodos,
+                with_labels=True,
+                node_size=3000,
+                node_color=current_colors,
+                font_size=10,
+                font_weight='bold',
+                edge_color='black'
+            )
             plt.pause(0.5)
         plt.show()
 
     def q0(self, llave):
+        '''Valida que la llave sea correcta.'''
         self.agregar_estado("q0", tipo="inicial")
-        if not re.match(r'^[a-zA-Z0-9]+$', llave):
+        if not re.match(r'^[a-zA-Z0-9 ]+$', llave):
             self.agregar_estado("q8", tipo="noAceptado")
             self.agregar_transicion("q0", "q8", f"{llave}")
             return False
         return True
 
     def q1(self, texto_plano, llave):
+        '''Valida que el texto plano sea correcto.'''
         self.agregar_estado("q1")
         self.agregar_transicion("q0", "q1", f"{llave}")
-        if not re.match(r'^[a-zA-Z0-9]+$', texto_plano):
+        if not re.match(r'^[a-zA-Z0-9 ]+$', texto_plano):
             self.agregar_estado("q9", tipo="noAceptado")
             self.agregar_transicion("q1", "q9", f"{llave}")
             return False
         return True
 
     def q2(self, llave, texto_plano ):
+        '''Convierte la llave en la llave ASCII'''
         llave_ascii = [ord(c) for c in llave]
         self.agregar_estado("q2")
         self.agregar_transicion("q1", "q2", f"{texto_plano}")
@@ -127,6 +131,7 @@ class AutomataFinitoDeterminista:
         return llaves
 
     def q5(self, llaves, texto_plano):
+        '''Aplica el XOR de las llaves con el texto plano'''
         self.agregar_estado("q5")
         self.agregar_estado("q6")
         self.agregar_transicion("q4", "q5", "PRGA")
@@ -140,11 +145,11 @@ class AutomataFinitoDeterminista:
         return ' '.join(texto_cifrado)
 
     def q6(self, texto_cifrado):
+        '''Genera el estado final que muestra el texto cifrado'''
         self.agregar_estado("q7", tipo="final")
         self.agregar_transicion("q6", "q7", f"{texto_cifrado}")
 
 
-# Función que se ejecuta al presionar el botón
 def generar_automata():
     '''Genera un autómata y muestra el resultado'''
 
@@ -166,7 +171,6 @@ def generar_automata():
             llaves = afd.q4(S, texto_plano)
             texto_cifrado = afd.q5(llaves, texto_plano)
             afd.q6(texto_cifrado)
-
 
     afd.mostrar_automata()
 
