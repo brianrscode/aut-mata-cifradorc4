@@ -16,7 +16,7 @@ class AutomataFinitoDeterminista:
     def agregar_estado(self, estado, tipo=None, color='skyblue'):
         '''Agrega un estado (nodo) al autómata.'''
         if tipo == 'final':
-            color = 'green'
+            color = 'lightgreen'
         elif tipo == 'inicial':
             color = 'yellow'
         elif tipo == 'noAceptado':
@@ -59,7 +59,8 @@ class AutomataFinitoDeterminista:
                 arista = labels[(nodo_origen, nodo_destino, 0)]
                 x_texto = (pos_nodos[nodo_origen][0] + pos_nodos[nodo_destino][0]) / 2
                 y_texto = (pos_nodos[nodo_origen][1] + pos_nodos[nodo_destino][1]) / 2
-                plt.text(x_texto, y_texto, arista, fontsize=10, ha='center', va='center', bbox=dict(facecolor='white', alpha=0.5))
+                plt.text(x_texto, y_texto, arista, fontsize=10, ha='center', va='center',
+                         bbox=dict(facecolor='white', alpha=0.5))
             plt.pause(0.5)
             # Muestra el autómata coloreando cada nodo paso a paso
             nx.draw(
@@ -78,7 +79,7 @@ class AutomataFinitoDeterminista:
     def q0(self, llave):
         '''Valida que la llave sea correcta.'''
         self.agregar_estado("q0", tipo="inicial")
-        if not re.match(r'^[a-zA-Z0-9 ]+$', llave):
+        if not re.match(r'^[a-zA-Z0-9áéíóú ]+$', llave):
             self.agregar_estado("q8", tipo="noAceptado")
             self.agregar_transicion("q0", "q8", f"{llave}")
             return False
@@ -88,9 +89,9 @@ class AutomataFinitoDeterminista:
         '''Valida que el texto plano sea correcto.'''
         self.agregar_estado("q1")
         self.agregar_transicion("q0", "q1", f"{llave}")
-        if not re.match(r'^[a-zA-Z0-9 ]+$', texto_plano):
+        if not re.match(r'^[a-zA-Z0-9áéíóú ]+$', texto_plano):
             self.agregar_estado("q9", tipo="noAceptado")
-            self.agregar_transicion("q1", "q9", f"{llave}")
+            self.agregar_transicion("q1", "q9", f"{texto_plano}")
             return False
         return True
 
